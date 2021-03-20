@@ -51,6 +51,12 @@ logging.basicConfig(
     level=logging.INFO,
     datefmt='%Y-%m-%d %H:%M:%S')
 
+# Get the temperature of the CPU for compensation
+def get_cpu_temperature():
+    process = Popen(['vcgencmd', 'measure_temp'], stdout=PIPE, universal_newlines=True)
+    output, _error = process.communicate()
+    return float(output[output.index('=') + 1:output.rindex("'")])
+
 # Starting values
 global_cpu_temps = [get_cpu_temperature()] * 5
 last_recorded_minute = 0
@@ -64,15 +70,6 @@ def setup_io_feeds():
         if feed_name not in existing_feeds_keys:
             feed = Feed(name=feed_values['name'], key=feed_values['name'], unit_symbol=feed_values['unit_symbol'],unit_type=feed_values['unit_type'])
             aio.create_feed(feed)
-
-def log_data(info):
-    logging.info("""Logging something""")
-
-# Get the temperature of the CPU for compensation
-def get_cpu_temperature():
-    process = Popen(['vcgencmd', 'measure_temp'], stdout=PIPE, universal_newlines=True)
-    output, _error = process.communicate()
-    return float(output[output.index('=') + 1:output.rindex("'")])
 
 def get_current_temperature():
     cpu_temp = get_cpu_temperature()
