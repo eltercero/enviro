@@ -6,6 +6,7 @@ import os
 import sys
 import ST7735
 import logging
+import numpy as np
 try:
     # Transitional fix for breaking change in LTR559
     from ltr559 import LTR559
@@ -15,7 +16,6 @@ except ImportError:
 
 from bme280 import BME280
 from enviroplus import gas
-from subprocess import PIPE, Popen
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
@@ -35,10 +35,20 @@ FEEDS={
         'unit_type': 'humidity',
         'unit_symbol': '%'
     }, 
-    'light': {
-        'name': 'light',
-        'unit_type': 'light',
-        'unit_symbol': 'lux'
+    'oxidising': {
+        'name': 'oxidising',
+        'unit_type': 'gas',
+        'unit_symbol': 'kO'
+    },
+    'reducing': {
+        'name': 'reducing',
+        'unit_type': 'gas',
+        'unit_symbol': 'kO'
+    },
+    'nh3': {
+        'name': 'nh3',
+        'unit_type': 'gas',
+        'unit_symbol': 'kO'
     }
 }
 
@@ -53,9 +63,10 @@ logging.basicConfig(
 
 # Get the temperature of the CPU for compensation
 def get_cpu_temperature():
-    process = Popen(['vcgencmd', 'measure_temp'], stdout=PIPE, universal_newlines=True)
-    output, _error = process.communicate()
-    return float(output[output.index('=') + 1:output.rindex("'")])
+    with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
+        temp = f.read()
+        temp = int(temp) / 1000.0
+    return temp
 
 # Starting values
 global_cpu_temps = [get_cpu_temperature()] * 5
@@ -85,21 +96,42 @@ def feed_io(key, value):
 
 setup_io_feeds()
 
+temperature_array = []
+humidity_array = []
+oxidising_array = []
+reducing_array = []
+nh3_array = []
+
 try:
     while True:
+        gas_data = gas.read_all()
+
+        temperature_array.append(get_current_temperature())
+        humidity_array.append(bme280.get_humidity())
+        oxidising_array.append(gas_data.oxidising/1000)
+        reducing_array.append(gas_data.reducing/1000)
+        nh3_array.append(gas_data.nh3/1000)
+
         if last_recorded_minute != datetime.now().time().minute:
             last_recorded_minute = datetime.now().time().minute
-            
+
+
             current_values = {
-                "temperature": get_current_temperature(),
-                "humidity": bme280.get_humidity(),
-                "light": ltr559.get_lux()
+                "temperature": np.mean(temperature_array),
+                "humidity": np.mean(humidity_array) ,
+                "oxidising": np.mean(oxidising_array) ,
+                "reducing": np.mean(reducing_array) ,
+                "nh3": np.mean(nh3_array) 
             }
+
+            temperature_array = []
+            humidity_array = []
+            oxidising_array = []
+            reducing_array = []
+            nh3_array = []
 
             for key, value in current_values.items():
                 feed_io(key, value)
-             
-                    
 # Exit cleanly
 except KeyboardInterrupt:
     sys.exit(0)
