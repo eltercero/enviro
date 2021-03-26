@@ -95,6 +95,9 @@ def feed_io(key, value):
     logging.info("> Sending –– {} –– values to adafruit io {:05.2f} *C".format(key, value))
     aio.send_data(key, value)
 
+def formattedMedian(array):
+    return float("{:.3f}".format(np.median(array)))
+
 setup_io_feeds()
 
 temperature_array = []
@@ -118,11 +121,11 @@ try:
 
 
             current_values = {
-                "temperature": np.mean(temperature_array),
-                "humidity": np.mean(humidity_array) ,
-                "oxidising": np.mean(oxidising_array) ,
-                "reducing": np.mean(reducing_array) ,
-                "nh3": np.mean(nh3_array) 
+                "temperature": formattedMedian(temperature_array),
+                "humidity": formattedMedian(humidity_array) ,
+                "oxidising": formattedMedian(oxidising_array) ,
+                "reducing": formattedMedian(reducing_array) ,
+                "nh3": formattedMedian(nh3_array) 
             }
 
             temperature_array = []
