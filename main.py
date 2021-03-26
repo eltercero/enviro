@@ -72,7 +72,7 @@ def setup_io_feeds():
             aio.create_feed(feed)
 
 def feed_io(key, value):
-    logging.info("> Sending –– {} –– values to adafruit io {:05.2f} *C".format(key, value))
+    logging.info("> Sending –– {} –– values to adafruit io {:05.2f} {}".format(key, value, FEEDS[key]['unit_symbol']))
     aio.send_data(key, value)
 
 def formattedMedian(array):
